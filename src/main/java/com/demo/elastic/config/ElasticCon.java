@@ -9,6 +9,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpHost;
 import org.apache.http.message.BasicHeader;
 import org.elasticsearch.client.RestClient;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -22,7 +23,8 @@ public class ElasticCon {
 
 
 
-    public ElasticsearchClient createClient(){
+    @Bean
+    public ElasticsearchClient esClient(){
         RestClient restClient = RestClient
                 .builder(HttpHost.create(SERVER_URL))
                 .setDefaultHeaders(new Header[]{
