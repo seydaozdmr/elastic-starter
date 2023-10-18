@@ -4,6 +4,8 @@ import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch.core.GetResponse;
 import co.elastic.clients.elasticsearch.core.IndexResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.UpdateResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.demo.elastic.model.Product;
 import org.springframework.stereotype.Component;
 import java.util.logging.Logger;
@@ -58,7 +60,7 @@ public class ElasticFeedUtil {
 
     public void findProduct(String searchText){
         try {
-            SearchResponse<Product> response = esClient.search(s -> s
+            SearchResponse<Product> search = esClient.search(s -> s
                             .index("products")
                             .query(q -> q
                                     .match(t -> t
@@ -69,10 +71,17 @@ public class ElasticFeedUtil {
                     Product.class
             );
 
-            LOGGER.info(response.hits().toString());
+            for (Hit<Product> hit: search.hits().hits()) {
+                processProduct(hit.source());
+            }
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void processProduct(Product product){
+        LOGGER.info("product : " + product);
     }
 
     public void updateProduct(){
@@ -91,20 +100,41 @@ public class ElasticFeedUtil {
     }
 
     public void updateDocumentFields(){
-
-        Product product = new Product("bk-1", "City bike", 123.0,10);
-
+        Product product = new Product("bk-1", "City bike", 250.0,10);
+        UpdateResponse<Product> response;
         try {
-            esClient.update(u -> u
+            response = esClient.update(u -> u
                             .index("products")
                             .id("bk-1")
-                            .upsert(product),
+                            .doc(product)
+                            .upsert(product)
+                            .docAsUpsert(true),
                     Product.class
             );
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
+        LOGGER.info("updateResponse : "+response);
+
+    }
+
+    public void deleteDocument(){
+        try {
+            esClient.delete(d -> d.index("products").id("bk-1"));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void deleteIndex(){
+        try {
+            esClient.indices().delete(c -> c
+                    .index("products")
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

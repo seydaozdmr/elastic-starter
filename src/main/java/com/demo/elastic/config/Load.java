@@ -21,7 +21,7 @@ public class Load implements CommandLineRunner {
 //        elasticCon.addIndices(elasticsearchClient);
 
         //elasticFeedUtil.loadProduct();
-        //elasticFeedUtil.getProduct();
+        elasticFeedUtil.getProduct();
         elasticFeedUtil.findProduct("bike");
         //elasticFeedUtil.updateProduct();
         elasticFeedUtil.updateDocumentFields();
