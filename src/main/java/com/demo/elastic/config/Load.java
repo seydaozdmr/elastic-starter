@@ -25,6 +25,7 @@ public class Load implements CommandLineRunner {
         elasticFeedUtil.findProduct("bike");
         //elasticFeedUtil.updateProduct();
         elasticFeedUtil.updateDocumentFields();
+        elasticFeedUtil.buildTermQuery("City bike");
 
 
     }

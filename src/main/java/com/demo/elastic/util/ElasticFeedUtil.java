@@ -1,10 +1,8 @@
 package com.demo.elastic.util;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch.core.GetResponse;
-import co.elastic.clients.elasticsearch.core.IndexResponse;
-import co.elastic.clients.elasticsearch.core.SearchResponse;
-import co.elastic.clients.elasticsearch.core.UpdateResponse;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.demo.elastic.model.Product;
 import org.springframework.stereotype.Component;
@@ -132,6 +130,21 @@ public class ElasticFeedUtil {
             esClient.indices().delete(c -> c
                     .index("products")
             );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public void buildTermQuery(String value){
+        Query query = new Query.Builder().term(e->e.field("category").value(value)).build();
+        try {
+            SearchResponse<Product> search = esClient.search(s -> s
+                            .index("products").query(query),
+                    Product.class
+            );
+            for (Hit<Product> hit: search.hits().hits()) {
+                processProduct(hit.source());
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
