@@ -1,6 +1,7 @@
 package com.demo.elastic.util;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.aggregations.HistogramBucket;
 import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
@@ -157,6 +158,61 @@ public class ElasticFeedUtil {
         for (Hit<Product> hit: hits) {
             Product product = hit.source();
             LOGGER.info("Found product " + product.getName() + ", score " + hit.score());
+        }
+    }
+
+    /**
+     * Elastic içine bir templete vererek daha sonra kodu değiştirmeden sorguyu değiştirebiliriz.
+     */
+    public void templatedSearch(){
+        try {
+            esClient.putScript(r -> r
+                    .id("query-script")
+                    .script(s -> s
+                            .lang("mustache")
+                            .source("{\"query\":{\"match\":{\"{{field}}\":\"{{value}}\"}}}")
+                    ));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * In the example below we run an aggregation that creates a price histogram from a product index, for the products whose name match a user-provided text.
+     */
+    public void simpleAggregation(){
+        String searchText = "bike";
+
+        Query query = MatchQuery.of(m -> m
+                .field("name")
+                .query(searchText)
+        )._toQuery();
+        SearchResponse<Void> response;
+        try {
+             response = esClient.search(b -> b
+                            .index("products")
+                            .size(0)
+                            .query(query)
+                            .aggregations("price-histogram", a -> a
+                                    .histogram(h -> h
+                                            .field("price")
+                                            .interval(50.0)
+                                    )
+                            ),
+                    Void.class
+            );
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        List<HistogramBucket> buckets = response.aggregations()
+                .get("price-histogram")
+                .histogram()
+                .buckets().array();
+
+        for (HistogramBucket bucket: buckets) {
+            LOGGER.info("There are " + bucket.docCount() +
+                    " bikes under " + bucket.key());
         }
     }
 
