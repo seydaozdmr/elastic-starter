@@ -1,12 +1,15 @@
 package com.demo.elastic.util;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.query_dsl.MatchQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import co.elastic.clients.elasticsearch.core.search.TotalHits;
 import co.elastic.clients.elasticsearch.core.search.TotalHitsRelation;
+import co.elastic.clients.json.JsonData;
 import com.demo.elastic.model.Product;
 import org.springframework.stereotype.Component;
 
@@ -132,6 +135,28 @@ public class ElasticFeedUtil {
 
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Nested Query with match query and range query
+     * @param searchText
+     * @param price
+     */
+    public void findWthNestedQueries (String searchText ,double price){
+        Query byName = MatchQuery.of(q-> q.field("name").query(searchText))._toQuery();
+        Query byMaxPrice = RangeQuery.of(q->q.field("price").gte(JsonData.of(price)))._toQuery();
+        SearchResponse response;
+        try {
+             response = esClient.search(s -> s.index("products").query(q->q.bool(b->b.must(byName).must(byMaxPrice))),Product.class);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        List<Hit<Product>> hits = response.hits().hits();
+        for (Hit<Product> hit: hits) {
+            Product product = hit.source();
+            LOGGER.info("Found product " + product.getName() + ", score " + hit.score());
         }
     }
 
