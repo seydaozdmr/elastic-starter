@@ -5,6 +5,8 @@ import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
 import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch.core.search.TotalHits;
+import co.elastic.clients.elasticsearch.core.search.TotalHitsRelation;
 import com.demo.elastic.model.Product;
 import org.springframework.stereotype.Component;
 
@@ -75,6 +77,9 @@ public class ElasticFeedUtil {
 
     }
 
+    /**
+     * Id'si bilinen bir dökümanı getirmek için get işlevi kullanılabilir
+     */
     public void getProduct(){
         GetResponse<Product> response = null;
         try {
@@ -95,6 +100,10 @@ public class ElasticFeedUtil {
         }
     }
 
+    /**
+     * Match Query  -> We will start with the simple text match query, searching for bikes in the products index.
+     * @param searchText
+     */
     public void findProduct(String searchText){
         try {
             SearchResponse<Product> search = esClient.search(s -> s
@@ -110,6 +119,15 @@ public class ElasticFeedUtil {
 
             for (Hit<Product> hit: search.hits().hits()) {
                 processProduct(hit.source());
+            }
+
+            TotalHits total = search.hits().total();
+            boolean isExactResult = total.relation() == TotalHitsRelation.Eq;
+
+            if (isExactResult) {
+                LOGGER.info("There are " + total.value() + " results");
+            } else {
+                LOGGER.info("There are more than " + total.value() + " results");
             }
 
         } catch (IOException e) {
