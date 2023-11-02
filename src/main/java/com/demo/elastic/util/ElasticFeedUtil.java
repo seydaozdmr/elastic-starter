@@ -3,9 +3,12 @@ package com.demo.elastic.util;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.bulk.BulkResponseItem;
 import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.demo.elastic.model.Product;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 import java.util.logging.Logger;
 
 import java.io.IOException;
@@ -19,6 +22,9 @@ public class ElasticFeedUtil {
         this.esClient = esClient;
     }
 
+    /**
+     * Product nesnesini elastic indisine eklemek için esClient.index kullanıyoruz. IndexRequest.of(i-> i ..) şeklinde de yapılandırılabilir.
+     */
     public void loadProduct(){
         Product product = new Product("bk-1", "City bike", 123.0);
 
@@ -34,6 +40,39 @@ public class ElasticFeedUtil {
         }
 
         LOGGER.info("Indexed with version " + response.version());
+    }
+
+    /**
+     * Bulk index : birden çok nesneyi toplu olarak eklemek için kullanabiliriz
+     */
+
+    public void loadBulkOperations(List<Product> productList){
+
+        BulkRequest.Builder bulkRequest = new BulkRequest.Builder();
+
+        for(Product product:productList){
+            bulkRequest.operations(op ->
+                op.index(idx -> idx.index("products")
+                        .id(product.getName())
+                        .document(product))
+            );
+        }
+        BulkResponse bulkResponse = null;
+        try {
+            bulkResponse = esClient.bulk(bulkRequest.build());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (bulkResponse.errors()) {
+            LOGGER.warning("Bulk had errors");
+            for (BulkResponseItem item: bulkResponse.items()) {
+                if (item.error() != null) {
+                    LOGGER.warning(item.error().reason());
+                }
+            }
+        }
+
     }
 
     public void getProduct(){
